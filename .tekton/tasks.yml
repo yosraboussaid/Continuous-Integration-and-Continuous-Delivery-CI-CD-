@@ -1,1 +1,41 @@
-
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: unit-tests
+spec:
+  workspaces:
+    - name: source
+  steps:
+    - name: run-nose
+      image: python:3.9-slim
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/bin/bash
+        pip install nose
+        if [ -f requirements.txt ]; then
+          pip install -r requirements.txt
+        fi
+        echo "Running Unit Tests..."
+        nosetests
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: cleanup
+spec:
+  workspaces:
+    - name: source
+  params:
+    - name: path-to-cleanup
+      type: string
+      description: Relative path within the workspace to delete
+      default: "."
+  steps:
+    - name: clean-workspace
+      image: alpine:latest
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/bin/sh
+        echo "Cleaning up directory: $(params.path-to-cleanup)"
+        rm -rf $(params.path-to-cleanup)/*
+        echo "Cleanup complete."
